@@ -28,6 +28,7 @@ root.geometry("800x600")
 # Define the columns
 columns = ("id", "name", "description", "price", "quantity", "category_id")
 
+
 # Create the tree to display the products
 products_tree = ttk.Treeview(root, columns=columns, show="headings")
 products_tree.place(x=50, y=50, width=400, height=500)
@@ -79,6 +80,75 @@ for product in products:
   products_tree.insert(parent="", index="end", values=(id, name, description, price, quantity, category_name))
   
 
+# test filter category
+
+# Get all the category names from the database
+cursor.execute("SELECT id FROM category")
+categories = cursor.fetchall()
+
+# Create a combobox to display the categories
+category_combobox = ttk.Combobox(root, values=categories, state="readonly")
+category_combobox.place(x=280, y=570)
+
+
+def filter_products_category():
+    # Clear the Treeview
+    products_tree.delete(*products_tree.get_children())
+
+    # Get the selected category
+    selected_category = category_combobox.get()
+
+    # Fetch all the products from the database
+    cursor.execute("SELECT * FROM product")
+    products = cursor.fetchall()
+
+    # Insert the products into the Treeview
+    for product in products:
+        id = product[0]
+        name = product[1]
+        description = product[2]
+        price = product[3]
+        quantity = product[4]
+        category_name = product[5]
+        if category_name == selected_category:
+            products_tree.insert(parent="", index="end", values=(id, name, description, price, quantity, category_name))
+    
+
+filter_button = Button(root, text="Filter", command=filter_products_category)
+filter_button.place(x=450, y=570)
+
+# Button to show all the products
+def show_all_products():
+    # Clear the Treeview
+    products_tree.delete(*products_tree.get_children())
+
+    # Fetch all the products from the database
+    cursor.execute("SELECT * FROM product")
+    products = cursor.fetchall()
+
+    # Insert the products into the Treeview
+    for product in products:
+        id = product[0]
+        name = product[1]
+        description = product[2]
+        price = product[3]
+        quantity = product[4]
+        category_name = product[5]
+        products_tree.insert(parent="", index="end", values=(id, name, description, price, quantity, category_name))
+
+show_all_button = Button(root, text="Show All Products", command=show_all_products)
+show_all_button.place(x=650, y=300)
+
+
+
+
+def quantity_category():
+  sql = "SELECT category_id, SUM(quantity) FROM product GROUP BY category_id"
+  cursor.execute(sql)
+  result = cursor.fetchall()
+  return len(result)
+
+
 # Create the add product function
 
 def add_product():
@@ -128,6 +198,50 @@ category_entry.grid(row=4, column=1)
 add_product_button = Button(add_product_frame, text="Add Product", command=add_product)
 add_product_button.grid(row=5, column=1)
 
+
+
+
+
+def sort_products():
+  # Get the selected column
+  selected_column = sort_by_combo.get()
+  # Clear the treeview
+  products_tree.delete(*products_tree.get_children())
+  # Fetch the products from the database
+  cursor.execute("SELECT * FROM product")
+  products = cursor.fetchall()
+  # Sort the products
+  if selected_column == "ID":
+    products.sort(key=lambda x: x[0])
+  elif selected_column == "Name":
+    products.sort(key=lambda x: x[1])
+  elif selected_column == "Description":
+    products.sort(key=lambda x: x[2])
+  elif selected_column == "Price":
+    products.sort(key=lambda x: x[3])
+  elif selected_column == "Quantity":
+    products.sort(key=lambda x: x[4])
+  elif selected_column == "Category":
+    products.sort(key=lambda x: x[5])
+  # Insert the products into the treeview
+  for product in products:
+    id=product[0]
+    name=product[1]
+    description=product[2]
+    price=product[3]
+    quantity=product[4]
+    category_name=product[5]
+    sql = "SELECT name FROM category WHERE id = %s"
+    val = (category_name,)
+    cursor.execute(sql, val)
+    category_name = cursor.fetchone()[0]
+    products_tree.insert(parent="", index="end", values=(id, name, description, price, quantity, category_name))
+
+sort_by_combo = ttk.Combobox(root, values=["ID", "Name", "Description", "Price", "Quantity", "Category"])
+sort_by_combo.place(x=50, y=570)
+sort_by_combo.current(0)
+sort_by_button = Button(root, text="Sort By", command=sort_products)
+sort_by_button.place(x=200, y=570)
 
 def delete_product():
   # Get the selected product from the listbox
@@ -231,3 +345,38 @@ root.mainloop()
 
 # Close the database connection
 db.close()
+
+
+
+
+
+# def choose_category():
+#   # Clear the treeview
+#   products_tree.delete(*products_tree.get_children())
+#   # Fetch the products from the database
+#   cursor.execute("SELECT * FROM product")
+#   products = cursor.fetchall()
+#   # Filter the products by category
+#   selected_category = category_combo.get()
+#   for product in products:
+#     id=product[0]
+#     name=product[1]
+#     description=product[2]
+#     price=product[3]
+#     quantity=product[4]
+    
+#     category_name=product[5]
+    
+#     sql = "SELECT name FROM category WHERE id = %s"
+#     val = (category_name,)
+#     cursor.execute(sql, val)
+#     category_name = cursor.fetchone()[0]
+#     products_tree.insert(parent="", index="end", values=(id, name, description, price, quantity, category_name))
+
+# categories = [ i for i in range(1, quantity_category() + 1)]
+
+# category_combo = ttk.Combobox(root, values=categories, state="readonly")  
+# category_combo.place(x=500, y=20, width=90, height=25)
+# category_combo.current(0)
+# category_combo_button = Button(root, text="Filter by category", command=choose_category)
+# category_combo_button.place(x=600, y=20, width=150, height=25)
